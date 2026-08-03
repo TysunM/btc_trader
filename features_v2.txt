@@ -1,0 +1,2 @@
+"close_SMA_1", "close_SMA_3", "close_SMA_6", "close_SMA_12", "close_SMA_24", "close_SMA_168", "close_SMA_672", "close_LINEARREG_SLOPE_3", "close_LINEARREG_SLOPE_6", "close_LINEARREG_SLOPE_12", "close_LINEARREG_SLOPE_24", "close_LINEARREG_SLOPE_168", "close_LINEARREG_SLOPE_672", "close_STDDEV_3", "close_STDDEV_6", "close_STDDEV_12", "close_STDDEV_24", "close_STDDEV_168", "close_STDDEV_672", "h4_close_EMA_6", "h4_close_EMA_42", "h4_close_LINEARREG_SLOPE_6", "h4_close_LINEARREG_SLOPE_42"
+
