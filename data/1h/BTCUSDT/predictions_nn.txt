@@ -1,0 +1,3 @@
+high_30_nn: {'auc': 0.626, 'ap': 0.123, 'f1': 0.0, 'precision': 0.0, 'recall': 0.0}
+low_30_nn: {'auc': 0.514, 'ap': 0.172, 'f1': 0.0, 'precision': 0.0, 'recall': 0.0}
+
