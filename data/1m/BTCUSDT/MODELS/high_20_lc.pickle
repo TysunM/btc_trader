@@ -1,0 +1,7 @@
+€•ù      Œsklearn.linear_model._logistic”ŒLogisticRegression”“”)”}”(Œ penalty”Œl2”ŒC”G?ð      Œl1_ratio”G        Œdual”‰Œtol”G?6âëC-Œ
+fit_intercept”ˆŒintercept_scaling”KŒclass_weight”NŒrandom_state”NŒsolver”Œsag”Œmax_iter”KdŒ verbose”K Œ
+warm_start”‰Œn_jobs”NŒn_features_in_”K
+Œclasses_”Œjoblib.numpy_pickle”ŒNumpyArrayWrapper”“”)”}”(Œsubclass”Œnumpy”Œ ndarray”“”Œshape”K…”Œorder”h Œdtype”hŒdtype”“”Œi8”‰ˆ‡”R”(KŒ<”NNNJÿÿÿÿJÿÿÿÿK t”bŒ
+allow_mmap”ˆŒnumpy_array_alignment_bytes”Kubÿÿÿÿÿÿÿÿÿÿÿ               •O       Œ n_iter_”h)”}”(hhh K…”h"h h#h%Œi4”‰ˆ‡”R”(Kh)NNNJÿÿÿÿJÿÿÿÿK t”bh+ˆh,Kub ÿÿÿÿÿÿÿd   •O       Œcoef_”h)”}”(hhh KK
+†”h"h h#h%Œf8”‰ˆ‡”R”(Kh)NNNJÿÿÿÿJÿÿÿÿK t”bh+ˆh,KubÿÿÿBÈ³£¿K¥e½Óº¿ÅÜ GÉ º¿™8žû§Ý¹¿¼å'{Ä¿¶<ÞÄ´}p¿¨N¼‡„¿ŒÜþ­ÇÂc?fÕ›u±©]¿]Á,d¤À¶?”(j …¡?Âxz¢±¶?Dñw±ŒÑ?•0       Œ
+intercept_”h)”}”(hhh K…”h"h h#h;h+ˆh,Kubÿÿÿÿÿÿÿÿÿÿÿÿÿÿ±´)PÀ•       Œ_sklearn_version”Œ1.9.0”ub.
