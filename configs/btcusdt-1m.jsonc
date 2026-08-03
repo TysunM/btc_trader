@@ -1,0 +1,155 @@
+{
+    // Phase 2: BTCUSDT spot, 1-minute bars — matches ITB's own upstream default (the public
+    // Telegram signal channel referenced in the project PDF runs this frequency). Adapted from
+    // upstream ITB's configs/config-sample-1min.jsonc: same feature/label/signal/algorithm
+    // shape (already "lc" upstream too), with download_max_rows added to keep a first run fast
+    // — 1-minute bars accumulate ~525,600 rows/year, so an uncapped download is a lot of data
+    // for just confirming the pipeline works.
+
+    "train": true,
+
+    "venue": "binance",
+    "client_args": {"tld": "us"}, // see configs/btcusdt-1h.jsonc's comment on binance.com region blocks
+
+    "api_key": "${BINANCE_API_KEY}",
+    "api_secret": "${BINANCE_API_SECRET}",
+    "telegram_bot_token": "${TELEGRAM_BOT_TOKEN}",
+    "telegram_chat_id": "${TELEGRAM_CHAT_ID}",
+
+    // See configs/btcusdt-1h.jsonc's comment: each freq gets its own data_folder to avoid
+    // silently corrupting klines.csv by mixing frequencies in one shared file.
+    "data_folder": "./data/1m",
+    "symbol": "BTCUSDT",
+    "description": "BTCUSDT 1min, Phase 2 (logistic regression, matches ITB's own default frequency)",
+    "freq": "1min",
+
+    "label_horizon": 120,
+    "features_horizon": 120,
+    "train_length": 200000,
+    "predict_length": 288,
+    "append_overlap_records": 5,
+
+    "download_max_rows": 200000, // ~139 days of 1-minute bars for a reasonably fast first run
+
+    // === DOWNLOAD AND MERGE ===
+
+    "data_sources": [
+        {"folder": "BTCUSDT", "file": "klines", "column_prefix": ""}
+    ],
+
+    // === GENERATE FEATURES ===
+
+    "feature_sets": [
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["SMA"], "windows": [1, 5, 10, 15, 60]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["LINEARREG_SLOPE"], "windows": [5, 10, 15, 60]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["STDDEV"], "windows": [5, 10, 15, 60]}},
+        {"column_prefix": "", "generator": "common.my_feature_example:my_feature_example", "feature_prefix": "", "config": {"columns": "close", "function": "add", "parameter": 2.0, "names": "close_add"}}
+    ],
+
+    // === LABELS ===
+
+    "label_sets": [
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "high", "thresholds": [2.0], "tolerance": 0.2, "horizon": 120, "names": ["high_20"]}},
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "low", "thresholds": [2.0], "tolerance": 0.2, "horizon": 120, "names": ["low_20"]}}
+    ],
+
+    // === TRAIN ===
+
+    "train_feature_sets": [
+        {"generator": "train_features", "config": {}}
+    ],
+
+    "train_features": [
+        "close_SMA_1", "close_SMA_5", "close_SMA_10", "close_SMA_15", "close_SMA_60",
+        "close_LINEARREG_SLOPE_5", "close_LINEARREG_SLOPE_10", "close_LINEARREG_SLOPE_15", "close_LINEARREG_SLOPE_60",
+        "close_STDDEV_5", "close_STDDEV_10", "close_STDDEV_15", "close_STDDEV_60"
+    ],
+
+    "labels": ["high_20", "low_20"],
+
+    "algorithms": [
+        {
+            "name": "lc",
+            "algo": "lc",
+            "params": {"is_scale": true},
+            "train": {"penalty": "l2", "C": 1.0, "class_weight": null, "solver": "sag", "max_iter": 100}
+        }
+    ],
+
+    // === GENERATE SIGNALS ===
+
+    "signal_sets": [
+        {
+            "generator": "combine", "config": {
+                "columns": ["high_20_lc", "low_20_lc"],
+                "names": "trade_score",
+                "combine": "difference",
+                "coefficient": 1.0, "constant": 0.0
+        }},
+        {
+            "generator": "threshold_rule", "config": {
+                "columns": "trade_score",
+                "names": ["buy_signal_column", "sell_signal_column"],
+                "parameters": {
+                    "buy_signal_threshold": 0.015,
+                    "sell_signal_threshold": -0.015
+                }
+        }}
+    ],
+
+    // === OUTPUTS (Phase 3+, unused by the offline pipeline) ===
+
+    "output_sets": [
+        {"generator": "score_notification_model", "config": {
+            "score_notification": true,
+            "score_column_names": ["trade_score"],
+            "notify_band_up": true,
+            "notify_band_dn": true,
+            "positive_bands": [
+                {"edge": 0.015, "frequency": 2, "sign": "📈", "bold": true, "text": "BUY ZONE"},
+                {"edge": 0.01, "frequency": 5, "sign": ">>", "bold": false, "text": "strong"},
+                {"edge": 0.005, "frequency": 10, "sign": ">", "text": "weak"}
+            ],
+            "negative_bands": [
+                {"edge": -0.005, "frequency": 10, "sign": "<", "text": "weak"},
+                {"edge": -0.01, "frequency": 5, "sign": "<<", "bold": false, "text": "strong"},
+                {"edge": -0.015, "frequency": 2, "sign": "📉", "bold": true, "text": "SELL ZONE"}
+            ]
+        }},
+        {"generator": "trader_simulation", "config": {
+            "buy_signal_column": "buy_signal_column",
+            "sell_signal_column": "sell_signal_column"
+        }}
+        // trader_binance intentionally omitted from this config -- see the project README's
+        // "Safety / Guardrails" section on how to (eventually, deliberately) enable it.
+    ],
+
+    // === FINDING BEST TRADE PARAMETERS ===
+
+    "simulate_model": {
+        "data_start": 0,
+        "data_end": null,
+        "direction": "long",
+        "topn_to_store": 10,
+        "signal_generator": "threshold_rule",
+        "buy_sell_equal": false,
+        "grid": {
+            "buy_signal_threshold": [0.02, 0.03, 0.04, 0.05, 0.1, 0.15],
+            "sell_signal_threshold": [-0.02, -0.03, -0.04, -0.05, -0.1, -0.15]
+        }
+    },
+
+    // === WALK-FORWARD BACKTEST ===
+
+    "rolling_predict": {
+        "data_start": null,
+        "data_end": null,
+
+        "prediction_start": null,
+        "prediction_size": 10080, // 10080min = 1 week per step
+        "prediction_steps": 4,
+
+        "use_multiprocessing": false,
+        "max_workers": 8
+    }
+}

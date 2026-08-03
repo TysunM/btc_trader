@@ -1,0 +1,214 @@
+{
+    // v2 quant/risk improvements demo config (CHANGELOG_V2.md). Same BTCUSDT 1h base data as
+    // configs/btcusdt-1h.jsonc (reuses ./data/1h -- run scripts.download/merge/features/labels
+    // from that config first, or point data_folder elsewhere for a from-scratch run), with every
+    // v2 item turned on so the before/after is easy to see against the v1 baseline:
+    //   1. fee_bps/slippage_bps in simulate_model
+    //   2. rolling_predict.embargo
+    //   3. algorithms[].params.calibrate
+    //   4. a regime_filter signal_sets entry (after threshold_rule)
+    //   5. trade_model.stop_loss_pct/take_profit_pct + position_sizing
+    //   6. a second (4h) data_sources entry for multi-timeframe context features
+    //   7. simulate_model.rank_by: "sharpe"
+    // Item 8 (ensemble) isn't wired into this config since it needs 2+ algorithms per label,
+    // which would require training gb/svc alongside lc here -- see CHANGELOG_V2.md item 8's
+    // docstring reference (v2/ensemble.py) for how to add it to any config with multiple
+    // algorithms.
+    //
+    // Run: python -m scripts.features / labels / train / predict_rolling / signals / simulate
+    // -c configs/btcusdt-1h-v2.jsonc (merge already done by the 1h config against the shared
+    // data_folder, but features/labels must be regenerated since this config adds the h4_*
+    // columns as new training features).
+
+    "train": true,
+    "venue": "binance",
+
+    "api_key": "${BINANCE_API_KEY}",
+    "api_secret": "${BINANCE_API_SECRET}",
+    "telegram_bot_token": "${TELEGRAM_BOT_TOKEN}",
+    "telegram_chat_id": "${TELEGRAM_CHAT_ID}",
+    "client_args": {"tld": "us"},
+
+    "data_folder": "./data/1h",
+    "symbol": "BTCUSDT",
+    "description": "BTCUSDT 1h, v2 quant/risk improvements demo",
+    "freq": "1h",
+
+    // Distinct from btcusdt-1h.jsonc's defaults: this config merges an extra (4h) data source,
+    // so its data.csv/features.csv/matrix.csv genuinely differ in shape from the v1 config's --
+    // sharing file names in the same data_folder would silently overwrite one or the other.
+    // MODELS/ is safe to share *because* the algorithm below is named "lc_v2" (not "lc") --
+    // files are named <label>_<algo>.pickle, so this trains high_30_lc_v2.pickle etc. alongside
+    // (not over) the v1 config's high_30_lc.pickle. transactions.txt IS shared/appended by both
+    // configs' paper simulators -- expect mixed v1/v2 entries if you run both.
+    "merge_file_name": "data_v2.csv",
+    "feature_file_name": "features_v2.csv",
+    "matrix_file_name": "matrix_v2.csv",
+    "predict_file_name": "predictions_v2.csv",
+    "signal_file_name": "signals_v2.csv",
+    "signal_models_file_name": "signal_models_v2",
+
+    "label_horizon": 24,
+    "features_horizon": 672,
+    "train_length": 0,
+    "predict_length": 168,
+    "append_overlap_records": 5,
+    "download_max_rows": 17520,
+
+    // === DOWNLOAD AND MERGE (v2 item 6: multi-timeframe context) ===
+    // h4_close is linearly interpolated between real 4h closes onto the hourly raster --
+    // smoother than a step-function forward-fill for feature purposes, still only ever using
+    // information available by that hour (the 4h bar it's interpolating from/to has already
+    // closed or is closing now).
+
+    "merge_interpolate": true,
+    "data_sources": [
+        {"folder": "BTCUSDT", "file": "klines", "column_prefix": ""},
+        {"folder": "BTCUSDT_4h", "file": "klines", "column_prefix": "h4"}
+    ],
+
+    // === GENERATE FEATURES ===
+
+    "feature_sets": [
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["SMA"], "windows": [1, 3, 6, 12, 24, 168, 672]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["LINEARREG_SLOPE"], "windows": [3, 6, 12, 24, 168, 672]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["STDDEV"], "windows": [3, 6, 12, 24, 168, 672]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["h4_close"], "functions": ["EMA"], "windows": [6, 42]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["h4_close"], "functions": ["LINEARREG_SLOPE"], "windows": [6, 42]}}
+    ],
+
+    // === LABELS ===
+
+    "label_sets": [
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "high", "thresholds": [3.0], "tolerance": 0.2, "horizon": 24, "names": ["high_30"]}},
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "low", "thresholds": [3.0], "tolerance": 0.2, "horizon": 24, "names": ["low_30"]}}
+    ],
+
+    // === TRAIN (v2 item 3: calibration) ===
+
+    "train_features": [
+        "close_SMA_1", "close_SMA_3", "close_SMA_6", "close_SMA_12", "close_SMA_24", "close_SMA_168",
+        "close_LINEARREG_SLOPE_3", "close_LINEARREG_SLOPE_6", "close_LINEARREG_SLOPE_12", "close_LINEARREG_SLOPE_24", "close_LINEARREG_SLOPE_168",
+        "close_STDDEV_3", "close_STDDEV_6", "close_STDDEV_12", "close_STDDEV_24", "close_STDDEV_168",
+        "h4_close_EMA_6", "h4_close_EMA_42", "h4_close_LINEARREG_SLOPE_6", "h4_close_LINEARREG_SLOPE_42"
+    ],
+
+    "labels": ["high_30", "low_30"],
+
+    "train_feature_sets": [
+        {"generator": "train_features", "config": {}}
+    ],
+
+    "algorithms": [
+        {
+            "name": "lc_v2",
+            "algo": "lc",
+            "params": {"is_scale": true, "calibrate": true, "calibrate_method": "sigmoid"},
+            "train": {"C": 1.0, "max_iter": 1000}
+        }
+    ],
+
+    // === GENERATE SIGNALS (v2 item 4: regime filter, after threshold_rule) ===
+
+    "signal_sets": [
+        {
+            "generator": "combine", "config": {
+                "columns": ["high_30_lc_v2", "low_30_lc_v2"],
+                "names": "trade_score",
+                "combine": "difference",
+                "coefficient": 1.0, "constant": 0.0
+        }},
+        {
+            "generator": "threshold_rule", "config": {
+                "columns": "trade_score",
+                "names": ["buy_signal_column", "sell_signal_column"],
+                "parameters": {
+                    "buy_signal_threshold": 0.08,
+                    "sell_signal_threshold": -0.08
+                }
+        }},
+        {
+            "generator": "v2.regime_filter:generate_regime_gate", "config": {
+                "adx_window": 14,
+                "adx_threshold": 20.0,
+                "buy_signal_column": "buy_signal_column",
+                "sell_signal_column": "sell_signal_column",
+                "gate_sell": false
+        }}
+    ],
+
+    // === OUTPUTS (v2 item 5: stop-loss/take-profit + position sizing advisory) ===
+
+    "output_sets": [
+        {"generator": "score_notification_model", "config": {
+            "score_notification": true,
+            "score_column_names": ["trade_score"],
+            "notify_band_up": true,
+            "notify_band_dn": true,
+            "positive_bands": [
+                {"edge": 0.08, "frequency": null, "sign": "📈", "bold": true, "text": "BUY ZONE"},
+                {"edge": 0.04, "frequency": null, "sign": ">>", "bold": false, "text": "strong"},
+                {"edge": 0.02, "frequency": null, "sign": ">", "text": "weak"}
+            ],
+            "negative_bands": [
+                {"edge": -0.02, "frequency": null, "sign": "<", "text": "weak"},
+                {"edge": -0.04, "frequency": null, "sign": "<<", "bold": false, "text": "strong"},
+                {"edge": -0.08, "frequency": null, "sign": "📉", "bold": true, "text": "SELL ZONE"}
+            ]
+        }},
+        {"generator": "trader_simulation", "config": {
+            "buy_signal_column": "buy_signal_column",
+            "sell_signal_column": "sell_signal_column"
+        }}
+    ],
+
+    "trade_model": {
+        "stop_loss_pct": 3.0,
+        "take_profit_pct": 8.0,
+        "position_sizing": {
+            "enabled": true,
+            "atr_window": 14,
+            "risk_pct": 1.0,
+            "kelly_cap": 0.25,
+            "nominal_equity": 10000.0
+        }
+    },
+
+    // === FINDING BEST TRADE PARAMETERS (v2 items 1 and 7: fees + sharpe ranking) ===
+
+    "simulate_model": {
+        "data_start": 0,
+        "data_end": null,
+        "direction": "long",
+        "topn_to_store": 10,
+        "signal_generator": "threshold_rule",
+        "buy_sell_equal": false,
+        "fee_bps": 10.0,
+        "slippage_bps": 2.0,
+        "rank_by": "sharpe",
+        // NOTE: this grid is NOT the same range as btcusdt-1h.jsonc's v1 grid (0.01-0.10), and
+        // that's deliberate, not an oversight -- sigmoid calibration (v2 item 3) widens
+        // trade_score's spread substantially (std ~0.03 -> ~0.19 measured on this data), so a
+        // threshold grid tuned for the *uncalibrated* score range barely filters anything once
+        // calibration is on and actively loses money after fees (verified: it does, badly).
+        // Recompute an appropriate grid range any time you change calibrate/calibrate_method --
+        // don't assume a v1 threshold grid transfers to a calibrated score.
+        "grid": {
+            "buy_signal_threshold": [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50],
+            "sell_signal_threshold": [-0.10, -0.15, -0.20, -0.25, -0.30, -0.35, -0.40, -0.45, -0.50]
+        }
+    },
+
+    // === WALK-FORWARD BACKTEST (v2 item 2: embargo) ===
+
+    "rolling_predict": {
+        "data_start": null,
+        "data_end": null,
+        "prediction_start": null,
+        "prediction_size": 720,
+        "prediction_steps": 6,
+        "embargo": 12,
+        "use_multiprocessing": false,
+        "max_workers": 4
+    }
+}

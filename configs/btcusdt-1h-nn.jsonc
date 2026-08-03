@@ -1,0 +1,146 @@
+{
+    // Same BTCUSDT 1h data as configs/btcusdt-1h.jsonc, but trained with the Keras MLP ("nn")
+    // classifier instead of logistic regression. Reuses the already-downloaded/merged/featured
+    // data (data_folder points at the same ./data/1h tree) since data.csv/features.csv/
+    // matrix.csv are algorithm-independent -- only train/predict/signals/simulate need rerunning.
+    // Needs the optional 'nn' extra: `uv sync --extra nn` (TensorFlow/Keras).
+    //
+    // Run: python -m scripts.train / predict_rolling / signals / simulate -c configs/btcusdt-1h-nn.jsonc
+    // (skip download/merge/features/labels -- already done by the lc config run against the
+    // same data_folder).
+
+    "train": true,
+
+    "venue": "binance",
+
+    "api_key": "${BINANCE_API_KEY}",
+    "api_secret": "${BINANCE_API_SECRET}",
+    "telegram_bot_token": "${TELEGRAM_BOT_TOKEN}",
+    "telegram_chat_id": "${TELEGRAM_CHAT_ID}",
+
+    "client_args": {"tld": "us"},
+
+    "data_folder": "./data/1h",
+    "symbol": "BTCUSDT",
+    "description": "BTCUSDT 1h, Keras MLP classifier",
+    "freq": "1h",
+
+    "label_horizon": 24,
+    "features_horizon": 672,
+    "train_length": 0,
+    "predict_length": 168,
+    "append_overlap_records": 5,
+
+    "download_max_rows": 17520,
+
+    // File names distinct from btcusdt-1h.jsonc's outputs so the two algorithms' predictions/
+    // signals/backtests don't overwrite each other in the shared data_folder. MODELS are safe
+    // to share (files are named <label>_<algo>.pickle, so "high_30_nn.pickle" and
+    // "high_30_lc.pickle" coexist).
+    "predict_file_name": "predictions_nn.csv",
+    "signal_file_name": "signals_nn.csv",
+    "signal_models_file_name": "signal_models_nn",
+
+    "data_sources": [
+        {"folder": "BTCUSDT", "file": "klines", "column_prefix": ""}
+    ],
+
+    "feature_sets": [
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["SMA"], "windows": [1, 3, 6, 12, 24, 168, 672]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["LINEARREG_SLOPE"], "windows": [3, 6, 12, 24, 168, 672]}},
+        {"column_prefix": "", "generator": "talib", "feature_prefix": "", "config": {"columns": ["close"], "functions": ["STDDEV"], "windows": [3, 6, 12, 24, 168, 672]}}
+    ],
+
+    "label_sets": [
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "high", "thresholds": [3.0], "tolerance": 0.2, "horizon": 24, "names": ["high_30"]}},
+        {"column_prefix": "", "generator": "highlow2", "feature_prefix": "", "config": {"columns": ["close", "high", "low"], "function": "low", "thresholds": [3.0], "tolerance": 0.2, "horizon": 24, "names": ["low_30"]}}
+    ],
+
+    "train_features": [
+        "close_SMA_1", "close_SMA_3", "close_SMA_6", "close_SMA_12", "close_SMA_24", "close_SMA_168",
+        "close_LINEARREG_SLOPE_3", "close_LINEARREG_SLOPE_6", "close_LINEARREG_SLOPE_12", "close_LINEARREG_SLOPE_24", "close_LINEARREG_SLOPE_168",
+        "close_STDDEV_3", "close_STDDEV_6", "close_STDDEV_12", "close_STDDEV_24", "close_STDDEV_168"
+    ],
+
+    "labels": ["high_30", "low_30"],
+
+    "train_feature_sets": [
+        {"generator": "train_features", "config": {}}
+    ],
+
+    "algorithms": [
+        {
+            "name": "nn",
+            "algo": "nn",
+            "params": {"is_scale": true, "layers": [8, 4]},
+            "train": {"learning_rate": 0.001, "n_epochs": 30, "bs": 64, "es": {"patience": 8}}
+        }
+    ],
+
+    "signal_sets": [
+        {
+            "generator": "combine", "config": {
+                "columns": ["high_30_nn", "low_30_nn"],
+                "names": "trade_score",
+                "combine": "difference",
+                "coefficient": 1.0, "constant": 0.0
+        }},
+        {
+            "generator": "threshold_rule", "config": {
+                "columns": "trade_score",
+                "names": ["buy_signal_column", "sell_signal_column"],
+                "parameters": {
+                    "buy_signal_threshold": 0.08,
+                    "sell_signal_threshold": -0.08
+                }
+        }}
+    ],
+
+    "output_sets": [
+        {"generator": "score_notification_model", "config": {
+            "score_notification": true,
+            "score_column_names": ["trade_score"],
+            "notify_band_up": true,
+            "notify_band_dn": true,
+            "positive_bands": [
+                {"edge": 0.08, "frequency": null, "sign": "📈", "bold": true, "text": "BUY ZONE"},
+                {"edge": 0.04, "frequency": null, "sign": ">>", "bold": false, "text": "strong"},
+                {"edge": 0.02, "frequency": null, "sign": ">", "text": "weak"}
+            ],
+            "negative_bands": [
+                {"edge": -0.02, "frequency": null, "sign": "<", "text": "weak"},
+                {"edge": -0.04, "frequency": null, "sign": "<<", "bold": false, "text": "strong"},
+                {"edge": -0.08, "frequency": null, "sign": "📉", "bold": true, "text": "SELL ZONE"}
+            ]
+        }},
+        {"generator": "trader_simulation", "config": {
+            "buy_signal_column": "buy_signal_column",
+            "sell_signal_column": "sell_signal_column"
+        }}
+    ],
+
+    "simulate_model": {
+        "data_start": 0,
+        "data_end": null,
+        "direction": "long",
+        "topn_to_store": 10,
+        "signal_generator": "threshold_rule",
+        "buy_sell_equal": false,
+        "grid": {
+            "buy_signal_threshold": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10],
+            "sell_signal_threshold": [-0.01, -0.02, -0.03, -0.04, -0.05, -0.06, -0.07, -0.08, -0.09, -0.10]
+        }
+    },
+
+    "rolling_predict": {
+        "data_start": null,
+        "data_end": null,
+
+        "prediction_start": null,
+        "prediction_size": 720,
+        "prediction_steps": 6,
+
+        "use_multiprocessing": false,
+        "max_workers": 4
+    }
+}
