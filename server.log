@@ -1,0 +1,34 @@
+2026-07-16 01:06:59,289 INFO Initializing server. Venue: binance. Symbol: BTCUSDT. Freq: 1min
+2026-07-16 01:06:59,427 DEBUG Using proactor: IocpProactor
+2026-07-16 01:06:59,428 DEBUG Starting new HTTPS connection (1): api.binance.us:443
+2026-07-16 01:06:59,738 DEBUG https://api.binance.us:443 "GET /api/v3/ping HTTP/1.1" 200 2
+2026-07-16 01:06:59,772 DEBUG Using proactor: IocpProactor
+2026-07-16 01:06:59,772 INFO ===> Start collector task. Timestamp 1784189219772. Interval [1784189160000,1784189220000].
+2026-07-16 01:06:59,860 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189219773&interval=1m&limit=1&startTime=0&symbol=BTCUSDT HTTP/1.1" 200 153
+2026-07-16 01:07:00,078 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189219773&interval=1m&limit=1000&startTime=1784164199773&symbol=BTCUSDT HTTP/1.1" 200 9540
+2026-07-16 01:07:00,087 INFO <=== End collector task.
+2026-07-16 01:07:00,088 INFO ===> Start collector task. Timestamp 1784189220088. Interval [1784189220000,1784189280000].
+2026-07-16 01:07:00,174 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189220088&interval=1m&limit=9&symbol=BTCUSDT HTTP/1.1" 200 245
+2026-07-16 01:07:00,178 INFO <=== End collector task.
+2026-07-16 01:07:00,179 INFO Analyze BTCUSDT. Last kline timestamp: 2026-07-16 08:06:00+00:00
+2026-07-16 01:07:00,230 INFO Analyze finished. Close: 64,194.81 Signals: trade_score=+0.003, buy_signal_column=False, sell_signal_column=False
+2026-07-16 01:07:00,231 WARNING Recomputed row differs from previous computation at 2026-07-16 08:04:00+00:00. NEW: {'close_SMA_1': 64194.81, 'close_SMA_5': 64214.30399999999, 'close_SMA_10': 64180.911, 'close_SMA_15': 64168.50466666666, 'close_SMA_60': 64408.883, 'close_LINEARREG_SLOPE_5': -7.8419999999998256, 'close_LINEARREG_SLOPE_10': 12.277030303030166, 'close_LINEARREG_SLOPE_15': 6.22074999999981, 'close_LINEARREG_SLOPE_60': -11.528787996665784, 'close_STDDEV_5': 17.370406557574917, 'close_STDDEV_10': 45.18450518629417, 'close_STDDEV_15': 45.09851584653312, 'close_STDDEV_60': 209.17234474059063}. OLD: {'close_SMA_1': nan, 'close_SMA_5': nan, 'close_SMA_10': nan, 'close_SMA_15': nan, 'close_SMA_60': nan, 'close_LINEARREG_SLOPE_5': nan, 'close_LINEARREG_SLOPE_10': nan, 'close_LINEARREG_SLOPE_15': nan, 'close_LINEARREG_SLOPE_60': nan, 'close_STDDEV_5': nan, 'close_STDDEV_10': nan, 'close_STDDEV_15': nan, 'close_STDDEV_60': nan}
+2026-07-16 01:07:00,231 INFO Finished initial data collection (cold start).
+2026-07-16 01:07:00,231 DEBUG Looking up time zone info from registry
+2026-07-16 01:07:00,235 INFO Scheduler started.
+2026-07-16 01:07:01,000 INFO ===> Start collector task. Timestamp 1784189221000. Interval [1784189220000,1784189280000].
+2026-07-16 01:07:01,085 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189221000&interval=1m&limit=8&symbol=BTCUSDT HTTP/1.1" 200 216
+2026-07-16 01:07:01,091 INFO <=== End collector task.
+2026-07-16 01:07:01,092 INFO Analyze BTCUSDT. Last kline timestamp: 2026-07-16 08:06:00+00:00
+2026-07-16 01:07:01,126 INFO Analyze finished. Close: 64,194.81 Signals: trade_score=+0.003, buy_signal_column=False, sell_signal_column=False
+2026-07-16 01:07:01,127 INFO (Telegram not configured) BTC 64,195 Indicator: %2B0.00 ^   1min
+2026-07-16 01:08:01,003 INFO ===> Start collector task. Timestamp 1784189281003. Interval [1784189280000,1784189340000].
+2026-07-16 01:08:01,087 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189281004&interval=1m&limit=9&symbol=BTCUSDT HTTP/1.1" 200 224
+2026-07-16 01:08:01,093 INFO <=== End collector task.
+2026-07-16 01:08:01,093 INFO Analyze BTCUSDT. Last kline timestamp: 2026-07-16 08:07:00+00:00
+2026-07-16 01:08:01,137 INFO Analyze finished. Close: 64,194.81 Signals: trade_score=+0.003, buy_signal_column=False, sell_signal_column=False
+2026-07-16 01:09:01,000 INFO ===> Start collector task. Timestamp 1784189341000. Interval [1784189340000,1784189400000].
+2026-07-16 01:09:01,086 DEBUG https://api.binance.us:443 "GET /api/v3/klines?endTime=1784189341000&interval=1m&limit=9&symbol=BTCUSDT HTTP/1.1" 200 221
+2026-07-16 01:09:01,093 INFO <=== End collector task.
+2026-07-16 01:09:01,093 INFO Analyze BTCUSDT. Last kline timestamp: 2026-07-16 08:08:00+00:00
+2026-07-16 01:09:01,138 INFO Analyze finished. Close: 64,194.81 Signals: trade_score=+0.003, buy_signal_column=False, sell_signal_column=False
