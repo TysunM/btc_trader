@@ -1,0 +1,2 @@
+"close_SMA_1", "close_SMA_5", "close_SMA_10", "close_SMA_15", "close_SMA_60", "close_LINEARREG_SLOPE_5", "close_LINEARREG_SLOPE_10", "close_LINEARREG_SLOPE_15", "close_LINEARREG_SLOPE_60", "close_STDDEV_5", "close_STDDEV_10", "close_STDDEV_15", "close_STDDEV_60", "close_add"
+
